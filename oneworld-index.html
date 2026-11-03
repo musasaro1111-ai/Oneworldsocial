@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#101a35">
+<title>ONEWORLD — One world. One platform.</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--navy:#101a35;--blue:#3267f6;--red:#ff4d5e;--ink:#172033;--muted:#778198;--line:#e8ebf2;--bg:#f5f7fb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+header{background:var(--navy);color:#fff;padding:15px 5%;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:5}
+.brand{font-size:23px;font-weight:900;letter-spacing:1.5px}.brand span{color:#ff6876}.tag{font-size:11px;color:#c5cce0}
+button{border:0;border-radius:12px;padding:11px 16px;background:var(--blue);color:#fff;font-weight:700;cursor:pointer}
+button.secondary{background:#eef2ff;color:#294fc4}button.ghost{background:transparent;color:#fff;border:1px solid #53607c}
+main{max-width:1180px;margin:25px auto;padding:0 16px;display:grid;grid-template-columns:220px minmax(0,620px) 240px;gap:20px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 5px 20px #17203308}
+.side h3,.right h3{margin:0 0 12px}.navitem{padding:10px 12px;border-radius:10px;color:#566078;margin:3px 0}.navitem.active{background:#eef2ff;color:#244ecb;font-weight:800}
+.hero{background:linear-gradient(130deg,#18294f,#3267f6 70%,#ff5968);color:white;padding:24px;border-radius:20px;margin-bottom:17px}
+.hero h1{font-size:clamp(25px,4vw,38px);line-height:1.1;margin:0 0 8px}.hero p{margin:0;color:#e8edff}
+.composer textarea{width:100%;min-height:90px;resize:vertical;border:1px solid var(--line);border-radius:12px;padding:13px;font:inherit;outline-color:var(--blue)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px}.muted{color:var(--muted);font-size:13px}
+.post{margin-top:14px}.posthead{display:flex;align-items:center;gap:10px}.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#eaf0ff;color:#2856db;font-weight:900}.post p{white-space:pre-wrap;overflow-wrap:anywhere}.authbox{max-width:440px;margin:45px auto;padding:24px}.authbox input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;margin:7px 0 12px;font:inherit}.hidden{display:none}.pill{display:inline-block;background:#eef2ff;color:#3158d5;border-radius:99px;padding:4px 9px;font-size:12px;font-weight:700}
+footer{text-align:center;color:#8a93a7;padding:25px;font-size:12px}
+@media(max-width:900px){main{grid-template-columns:1fr;max-width:680px}.side,.right{display:none}}
+</style>
+</head>
+<body>
+<header><div><div class="brand">ONE<span>WORLD</span></div><div class="tag">One world. One platform. Infinite connections.</div></div><div id="headerActions"><button class="ghost" onclick="showAuth()">Sign in</button></div></header>
+<section id="auth" class="card authbox hidden">
+<h2 id="authTitle">Welcome to ONEWORLD</h2><p class="muted">Create an account or sign in to join the conversation.</p>
+<label>Email</label><input id="email" type="email" autocomplete="email" placeholder="you@example.com">
+<label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="At least 6 characters">
+<div class="row"><button onclick="authenticate('signin')">Sign in</button><button class="secondary" onclick="authenticate('signup')">Create account</button></div>
+<p id="authMessage" class="muted"></p><button class="ghost" style="color:#536078;border-color:#dce1eb" onclick="hideAuth()">Close</button>
+</section>
+<main>
+<aside class="side card"><h3>Your world</h3><div class="navitem active">⌂ &nbsp; Home feed</div><div class="navitem">◉ &nbsp; Discover</div><div class="navitem">▣ &nbsp; Stories</div><div class="navitem">✉ &nbsp; Messages</div><div class="navitem">♧ &nbsp; Communities</div><div class="navitem">▤ &nbsp; Videos</div><hr style="border:0;border-top:1px solid var(--line);margin:15px 0"><span class="muted">A unified space for sharing, connecting and discovering.</span></aside>
+<section>
+<div class="hero"><span class="pill" style="background:#ffffff25;color:#fff">WELCOME TO THE COMMUNITY</span><h1>Everything social.<br>In one world.</h1><p>Share ideas, meet people and build communities across borders.</p></div>
+<div class="card composer"><div class="row" style="margin:0 0 12px"><strong>What's happening?</strong><span class="muted" id="userStatus">Sign in to publish</span></div><textarea id="postText" placeholder="Share something with the world..." maxlength="2000"></textarea><div class="row"><span class="muted">Be respectful. Be real. Be global.</span><button onclick="publishPost()">Publish post</button></div><p id="postMessage" class="muted"></p></div>
+<div id="feed"></div>
+</section>
+<aside class="right card"><h3>Explore ONEWORLD</h3><p>🌍 <b>Global community</b><br><span class="muted">Connect beyond borders.</span></p><p>🎬 <b>Media & stories</b><br><span class="muted">A home for your updates.</span></p><p>💬 <b>Conversations</b><br><span class="muted">Ideas start here.</span></p><hr style="border:0;border-top:1px solid var(--line)"><span class="muted">Early version — more features will be added in stages.</span></aside>
+</main>
+<footer>© <span id="year"></span> ONEWORLD · Built for a connected world.</footer>
+<script>
+const SUPABASE_URL = "https://ucsjlwppdhrwllpwmvxi.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_VWk9li2usZOcjksV-gJdlg_OpxyvB4D";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUser = null;
+document.getElementById('year').textContent = new Date().getFullYear();
+function showAuth(){document.getElementById('auth').classList.remove('hidden')}
+function hideAuth(){document.getElementById('auth').classList.add('hidden')}
+function say(id,msg){document.getElementById(id).textContent=msg}
+async function authenticate(mode){
+ const email=document.getElementById('email').value.trim(), password=document.getElementById('password').value;
+ if(!email||!password){say('authMessage','Enter your email and password.');return}
+ say('authMessage','Please wait...');
+ const result=mode==='signup'?await db.auth.signUp({email,password}):await db.auth.signInWithPassword({email,password});
+ if(result.error){say('authMessage',result.error.message);return}
+ if(mode==='signup'&&!result.data.session){say('authMessage','Account created. Check your email to confirm, then sign in.');return}
+ currentUser=result.data.user;hideAuth();updateHeader();loadFeed();
+}
+async function updateHeader(){
+ const box=document.getElementById('headerActions');
+ if(currentUser){box.innerHTML='<span style="font-size:12px;margin-right:10px">'+escapeHtml(currentUser.email)+'</span><button class="ghost" onclick="signOut()">Sign out</button>';say('userStatus','Signed in');}
+ else{box.innerHTML='<button class="ghost" onclick="showAuth()">Sign in</button>';say('userStatus','Sign in to publish');}
+}
+async function signOut(){await db.auth.signOut();currentUser=null;updateHeader()}
+async function publishPost(){
+ if(!currentUser){showAuth();say('postMessage','Sign in first to publish.');return}
+ const content=document.getElementById('postText').value.trim();if(!content){say('postMessage','Write something first.');return}
+ say('postMessage','Publishing...');
+ const {error}=await db.from('posts').insert({user_id:currentUser.id,content});
+ if(error){say('postMessage','Could not publish: '+error.message);return}
+ document.getElementById('postText').value='';say('postMessage','Your post is live.');loadFeed();
+}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function loadFeed(){
+ const target=document.getElementById('feed');target.innerHTML='<p class="muted" style="padding:15px">Loading posts...</p>';
+ const {data,error}=await db.from('posts').select('id,user_id,content,created_at').order('created_at',{ascending:false}).limit(40);
+ if(error){target.innerHTML='<div class="card post"><b>Feed is not connected yet.</b><p class="muted">'+escapeHtml(error.message)+'</p><p class="muted">Check that the posts table exists and has Row Level Security policies allowing users to read posts.</p></div>';return}
+ if(!data?.length){target.innerHTML='<div class="card post"><b>Your feed starts here.</b><p class="muted">No posts yet. Be the first to share something.</p></div>';return}
+ target.innerHTML=data.map(p=>'<article class="card post"><div class="posthead"><div class="avatar">O</div><div><b>ONEWORLD member</b><div class="muted">'+new Date(p.created_at).toLocaleString()+'</div></div></div><p>'+escapeHtml(p.content)+'</p></article>').join('');
+}
+db.auth.getSession().then(({data})=>{currentUser=data.session?.user||null;updateHeader();loadFeed()});
+db.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;updateHeader()});
+</script>
+</body>
+</html>
